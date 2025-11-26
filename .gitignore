@@ -3,3 +3,11 @@
 trg/
 dist
 .DS_Store
+
+# Avoid problems when Jdtls picks up Java classes
+.idea
+.classpath
+.project
+.settings
+**/*.class
+tests/fixtures/**/target/*

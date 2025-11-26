@@ -22,6 +22,7 @@ function FrameworkRegistry:_register_default_frameworks()
   local DotNetFramework = require "endpoint.frameworks.dotnet"
   local ServletFramework = require "endpoint.frameworks.servlet"
   local ReactRouterFramework = require "endpoint.frameworks.react_router"
+  local JakartaEEFramework = require "endpoint.frameworks.jakarta_ee"
 
   local framework_classes = {
     SpringFramework,
@@ -34,6 +35,7 @@ function FrameworkRegistry:_register_default_frameworks()
     KtorFramework,
     ServletFramework,
     ReactRouterFramework,
+    JakartaEEFramework,
   }
 
   for _, framework_class in ipairs(framework_classes) do
