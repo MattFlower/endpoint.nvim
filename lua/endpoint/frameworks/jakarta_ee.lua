@@ -34,6 +34,10 @@ function JakartaEEFramework:initialize()
 					"jersey",
 					"resteasy",
 					"cxf-rt-frontend-jaxrs",
+					"quarkus-rest",
+					"quarkus-rest-jackson",
+					"quarkus-rest-jsonb",
+					"helidon-webserver-jersey",
 				},
 				manifest_files = {
 					"pom.xml",
