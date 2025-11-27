@@ -16,6 +16,7 @@ A powerful Neovim plugin for quickly finding and navigating web framework API en
 - .NET Core (C#)
 - Ktor (Kotlin)
 - Java Servlet (Java)
+- Jakarta EE (Java)
 - React Router (Client-side routing)
 
 ## 🖥️ Demo
@@ -28,7 +29,7 @@ A powerful Neovim plugin for quickly finding and navigating web framework API en
 
 ## ✨ Features
 
-- 🔍 **Multi-Framework Support**: Automatically detects and supports 10 web frameworks
+- 🔍 **Multi-Framework Support**: Automatically detects and supports 11 web frameworks
 - 🎯 **Multiple Picker Interfaces**: Telescope, vim.ui.select, or Snacks.nvim
 - ⚡ **Smart Caching**: Real-time, session, or persistent modes
 - 📍 **Precise Navigation**: Jump directly to endpoint definitions
@@ -113,6 +114,7 @@ require("endpoint").setup({
 ```
 
 **Legacy Configuration (still supported with deprecation warnings):**
+
 ```lua
 require("endpoint").setup({
   picker = "telescope",       -- @deprecated: use picker.type
