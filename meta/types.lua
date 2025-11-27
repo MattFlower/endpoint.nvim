@@ -433,10 +433,10 @@
 ---@field _cached_file_path string|nil Cached file path for TreeSitter parsing
 ---@field _cached_tree table|nil Cached TreeSitter tree
 ---@field _cached_source string|nil Cached file source content
+---@field _normalize_path fun(self: endpoint.JakartaEEParser, path: string|nil): string|nil Normalize path to start with /
+---@field _parse_with_treesitter fun(self: endpoint.JakartaEEParser, tree: table, source: string, file_path: string, line_number: number, column: number): endpoint.entry|nil Parse using TreeSitter AST
 ---@field _get_file_tree fun(self: endpoint.JakartaEEParser, file_path: string): table|nil, string|nil Parse file with TreeSitter and cache result
----@field _find_method_at_line fun(self: endpoint.JakartaEEParser, tree: table, source: string, line_number: number): table|nil Find method_declaration containing line
----@field _find_method_near_line fun(self: endpoint.JakartaEEParser, tree: table, source: string, line_number: number): table|nil Find method when cursor is on annotation line
----@field _find_methods_recursive fun(self: endpoint.JakartaEEParser, node: table, ts_line: number, source: string, callback: function): table|nil Recursive method finder helper
+---@field _find_method_for_line fun(self: endpoint.JakartaEEParser, tree: table, source: string, line_number: number): table|nil Find method_declaration for line
 ---@field _get_method_annotations fun(self: endpoint.JakartaEEParser, method_node: table, source: string): table[] Get all annotations from method declaration
 ---@field _parse_annotation_node fun(self: endpoint.JakartaEEParser, node: table, source: string): table|nil Parse a single annotation node
 ---@field _extract_annotation_value fun(self: endpoint.JakartaEEParser, args_node: table, source: string): string|nil Extract string value from annotation arguments (handles concatenation)
@@ -446,8 +446,7 @@
 ---@field _get_class_path_annotation fun(self: endpoint.JakartaEEParser, class_node: table, source: string): string|nil Get @Path value from class annotations
 ---@field _is_http_method_annotation fun(self: endpoint.JakartaEEParser, name: string): boolean Check if annotation is HTTP method (GET/POST/etc)
 ---@field _get_annotations_text fun(self: endpoint.JakartaEEParser, annotations: table[], source: string): string Build text from annotations for metadata
----@field _has_http_method_annotation fun(self: endpoint.JakartaEEParser, content: string): boolean Check for JAX-RS HTTP method annotation (regex)
----@field _parse_with_treesitter fun(self: endpoint.JakartaEEParser, tree: table, source: string, content: string, file_path: string, line_number: number, column: number): endpoint.entry|nil Parse using TreeSitter AST
+---@field _has_http_method_annotation fun(self: endpoint.JakartaEEParser, content: string): boolean Check for JAX-RS HTTP method annotation
 
 -- ========================================
 -- CONCRETE FRAMEWORK IMPLEMENTATIONS
