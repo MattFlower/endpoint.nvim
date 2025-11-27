@@ -20,12 +20,11 @@ The framework detect Jakarta EE projects by looking for specific dependencies in
 - jakarta.ws.rs
 - javax.ws.rs
 - jax-rs
-- jersey
-- resteasy
+- jersey-server
+- resteasy-core
 - cxfr-rt-frontend-jaxrs
 - quarkus-rest
-- quarkus-rest-jackson
-- quarkus-rest-jsonb
+- micronaut-jaxrs-server
 - helidon-webserver-jersey
 
 **Manifest Files Searched:**
@@ -184,7 +183,7 @@ vim.g.endpoint_debug = true
 > [!INFO]
 >
 > - Works with javax.ws.rs and jakarta.ws.rs annotations.
-> - Compatible with Helidon and Quarkus frameworks, it's a easy pull request to jakarta_ee.lua to add additional ones.
+> - Compatible with Quarkus, Micronaut, Helidon, and CXF frameworks
 > - Supports Java and Kotlin files
 > - Handles nested path structures
 > - Automatically excludes build directories from search
