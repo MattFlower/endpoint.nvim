@@ -127,6 +127,7 @@ function JakartaEEParser:is_content_valid_for_parsing(content)
 end
 
 ---Override parse_content to handle JAX-RS annotations using TreeSitter
+---Requires the file to exist and be parseable by TreeSitter
 function JakartaEEParser:parse_content(content, file_path, line_number, column)
 	if not self:is_content_valid_for_parsing(content) then
 		return nil
@@ -134,17 +135,11 @@ function JakartaEEParser:parse_content(content, file_path, line_number, column)
 
 	-- Parse file with TreeSitter
 	local tree, source = self:_get_file_tree(file_path)
-
-	-- If we can parse the file with TreeSitter, use AST-based extraction
-	if tree and source then
-		local result = self:_parse_with_treesitter(tree, source, content, file_path, line_number, column)
-		if result then
-			return result
-		end
+	if not tree or not source then
+		return nil
 	end
 
-	-- Fallback: parse just the content string (for tests or when file not available)
-	return self:_parse_content_only(content, file_path, line_number, column)
+	return self:_parse_with_treesitter(tree, source, content, file_path, line_number, column)
 end
 
 ---Parses using TreeSitter AST
@@ -223,34 +218,6 @@ function JakartaEEParser:_parse_with_treesitter(tree, source, _, file_path, line
 			base_path = base_path,
 			raw_endpoint_path = method_path,
 		}, extended_content),
-	}
-end
-
----Fallback parsing using just the content string (regex-based)
-function JakartaEEParser:_parse_content_only(content, file_path, line_number, column)
-	local method = self:extract_method(content)
-	if not method then
-		return nil
-	end
-
-	local endpoint_path = self:extract_endpoint_path(content)
-	if not endpoint_path then
-		endpoint_path = "/"
-	end
-
-	return {
-		method = method:upper(),
-		endpoint_path = endpoint_path,
-		file_path = file_path,
-		line_number = line_number,
-		column = column,
-		display_value = method:upper() .. " " .. endpoint_path,
-		confidence = self:get_parsing_confidence(content),
-		tags = { "java", "jakarta_ee", "jax_rs" },
-		metadata = self:create_metadata("endpoint", {
-			base_path = "",
-			raw_endpoint_path = endpoint_path,
-		}, content),
 	}
 end
 
@@ -473,6 +440,7 @@ function JakartaEEParser:_parse_annotation_node(node, source)
 end
 
 ---Extracts string value from annotation arguments
+---Handles simple string literals, binary expressions (concatenation), and element_value_pairs
 ---@param args_node table TreeSitter annotation_argument_list node
 ---@param source string Source code
 ---@return string|nil
@@ -485,21 +453,82 @@ function JakartaEEParser:_extract_annotation_value(args_node, source)
 			return text:match("^[\"'](.+)[\"']$")
 		end
 
-		-- Handle @Path(value = "/value")
+		-- Handle @Path(API_BASE + "/users") - binary expression (concatenation)
+		if child:type() == "binary_expression" then
+			return self:_extract_string_from_expression(child, source)
+		end
+
+		-- Handle @Path(value = "/value") or @Path(value = API_BASE + "/users")
 		if child:type() == "element_value_pair" then
 			local key_node = child:field("key")[1]
 			local value_node = child:field("value")[1]
 			if key_node and value_node then
 				local key = vim.treesitter.get_node_text(key_node, source)
-				if key == "value" and value_node:type() == "string_literal" then
-					local text = vim.treesitter.get_node_text(value_node, source)
-					return text:match("^[\"'](.+)[\"']$")
+				if key == "value" then
+					if value_node:type() == "string_literal" then
+						local text = vim.treesitter.get_node_text(value_node, source)
+						return text:match("^[\"'](.+)[\"']$")
+					elseif value_node:type() == "binary_expression" then
+						return self:_extract_string_from_expression(value_node, source)
+					end
 				end
 			end
 		end
 	end
 
 	return nil
+end
+
+---Recursively extracts string literals from a binary expression (concatenation)
+---For expressions like API_BASE + "/users", extracts only the string literal parts
+---@param expr_node table TreeSitter binary_expression node
+---@param source string Source code
+---@return string|nil
+function JakartaEEParser:_extract_string_from_expression(expr_node, source)
+	local parts = {}
+	self:_collect_string_literals(expr_node, source, parts)
+
+	if #parts == 0 then
+		return nil
+	end
+
+	return table.concat(parts, "")
+end
+
+---Recursively collects string literals from an expression tree
+---@param node table TreeSitter node
+---@param source string Source code
+---@param parts table Array to collect string parts into
+function JakartaEEParser:_collect_string_literals(node, source, parts)
+	local node_type = node:type()
+
+	if node_type == "string_literal" then
+		local text = vim.treesitter.get_node_text(node, source)
+		-- Remove quotes
+		local content = text:match("^[\"'](.+)[\"']$")
+		if content then
+			table.insert(parts, content)
+		end
+	elseif node_type == "binary_expression" then
+		-- Recursively process left and right operands
+		local left = node:field("left")[1]
+		local right = node:field("right")[1]
+		if left then
+			self:_collect_string_literals(left, source, parts)
+		end
+		if right then
+			self:_collect_string_literals(right, source, parts)
+		end
+	elseif node_type == "parenthesized_expression" then
+		-- Handle (expr) by processing the inner expression
+		for child in node:iter_children() do
+			if child:named() then
+				self:_collect_string_literals(child, source, parts)
+			end
+		end
+	end
+	-- For identifiers (like API_BASE), field_access, etc., we skip them
+	-- as we can only extract the literal string parts at parse time
 end
 
 ---Finds the containing class for a method

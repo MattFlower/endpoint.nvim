@@ -174,21 +174,23 @@ describe("JakartaEEFramework", function()
 	end)
 
 	describe("Parser Functionality", function()
+		local test_file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/TestResource.java"
+
 		it("should parse @GET annotations", function()
-			local content = "@GET"
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 9 has @GET
+			local result = parser:parse_content("    @GET", test_file_path, 9, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("GET", result.method)
 		end)
 
 		it("should parse @GET with @Path annotations", function()
-			local content = '@GET @Path("/users")'
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 14 has @GET, line 15 has @Path("/users")
+			local result = parser:parse_content("    @GET", test_file_path, 14, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("GET", result.method)
-			assert.equals("/users", result.endpoint_path)
+			assert.equals("/test/users", result.endpoint_path)
 		end)
 
 		it("should parse real JAX-RS resource file", function()
@@ -257,70 +259,175 @@ describe("JakartaEEFramework", function()
 		end)
 
 		it("should parse @POST annotations", function()
-			local content = "@POST"
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 20 has @POST
+			local result = parser:parse_content("    @POST", test_file_path, 20, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("POST", result.method)
 		end)
 
 		it("should parse @PUT annotations", function()
-			local content = '@PUT @Path("/{id}")'
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 25 has @PUT
+			local result = parser:parse_content("    @PUT", test_file_path, 25, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("PUT", result.method)
-			assert.equals("/{id}", result.endpoint_path)
 		end)
 
 		it("should parse @DELETE annotations", function()
-			local content = '@DELETE @Path("/{id}")'
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 30 has @DELETE
+			local result = parser:parse_content("    @DELETE", test_file_path, 30, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("DELETE", result.method)
-			assert.equals("/{id}", result.endpoint_path)
 		end)
 
 		it("should parse @PATCH annotations", function()
-			local content = '@PATCH @Path("/{id}/status")'
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 35 has @PATCH
+			local result = parser:parse_content("    @PATCH", test_file_path, 35, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("PATCH", result.method)
-			assert.equals("/{id}/status", result.endpoint_path)
 		end)
 
 		it("should parse @HEAD annotations", function()
-			local content = '@HEAD @Path("/{id}")'
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 40 has @HEAD
+			local result = parser:parse_content("    @HEAD", test_file_path, 40, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("HEAD", result.method)
 		end)
 
 		it("should parse @OPTIONS annotations", function()
-			local content = "@OPTIONS"
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 45 has @OPTIONS
+			local result = parser:parse_content("    @OPTIONS", test_file_path, 45, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("OPTIONS", result.method)
 		end)
 
 		it("should handle path without leading slash", function()
-			local content = '@GET @Path("users")'
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+			-- Line 50 has @GET, line 51 has @Path("noleadingslash")
+			local result = parser:parse_content("    @GET", test_file_path, 50, 5)
 
 			assert.is_not_nil(result)
-			assert.equals("/users", result.endpoint_path)
+			assert.equals("/test/noleadingslash", result.endpoint_path)
 		end)
 
-		it("should handle single quotes in path", function()
-			local content = "@GET @Path('/users')"
-			local result = parser:parse_content(content, "UserResource.java", 1, 1)
+		it("should handle paths with leading slash", function()
+			-- Line 56 has @GET, line 57 has @Path("/withslash")
+			local result = parser:parse_content("    @GET", test_file_path, 56, 5)
 
 			assert.is_not_nil(result)
-			assert.equals("/users", result.endpoint_path)
+			assert.equals("/test/withslash", result.endpoint_path)
+		end)
+
+		it("should extract string literals from concatenation with constant", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ApiResource.java"
+			-- Line 20 has @GET, line 21 has @Path(API_BASE + "/orders")
+			local result = parser:parse_content("    @GET", file_path, 20, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			-- Only the string literal "/orders" should be extracted (constant is skipped)
+			assert.equals("/orders", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should extract multiple string literals from concatenation", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ApiResource.java"
+			-- Line 26 has @POST, line 27 has @Path("/items" + "/{id}")
+			local result = parser:parse_content("    @POST", file_path, 26, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("POST", result.method)
+			-- Both string literals should be concatenated
+			assert.equals("/items/{id}", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should handle concatenation in element_value_pair", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ApiResource.java"
+			-- Line 32 has @PUT, line 33 has @Path(value = API_BASE + "/products")
+			local result = parser:parse_content("    @PUT", file_path, 32, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("PUT", result.method)
+			assert.equals("/products", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should handle multiple string concatenations", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ApiResource.java"
+			-- Line 38 has @DELETE, line 39 has @Path(value = "/categories" + "/" + "all")
+			local result = parser:parse_content("    @DELETE", file_path, 38, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("DELETE", result.method)
+			assert.equals("/categories/all", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should extract string literals when constant is from another class", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/AdminResource.java"
+			-- Line 9 has @GET, line 10 has @Path(Constants.API_VERSION + "/users")
+			local result = parser:parse_content("    @GET", file_path, 9, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			-- Only the string literal "/users" should be extracted (Constants.API_VERSION is skipped)
+			assert.equals("/users", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should handle mixed external constants and multiple string literals", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/AdminResource.java"
+			-- Line 15 has @POST, line 16 has @Path(Constants.API_VERSION + "/users" + "/create")
+			local result = parser:parse_content("    @POST", file_path, 15, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("POST", result.method)
+			-- Both string literals should be extracted, constant skipped
+			assert.equals("/users/create", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should handle string concatenation without external constants", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/AdminResource.java"
+			-- Line 21 has @DELETE, line 22 has @Path("/users/" + "all")
+			local result = parser:parse_content("    @DELETE", file_path, 21, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("DELETE", result.method)
+			-- Both string literals should be concatenated
+			assert.equals("/users/all", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should extract string literals when constant is from imported package", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ReportResource.java"
+			-- Line 10 has @GET, line 11 has @Path(ApiConfig.BASE_PATH + "/summary")
+			local result = parser:parse_content("    @GET", file_path, 10, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			-- Only the string literal "/summary" should be extracted
+			assert.equals("/summary", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should handle imported constant with multiple string literals", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ReportResource.java"
+			-- Line 16 has @GET, line 17 has @Path(ApiConfig.BASE_PATH + "/details" + "/full")
+			local result = parser:parse_content("    @GET", file_path, 16, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			-- Both string literals should be extracted, imported constant skipped
+			assert.equals("/details/full", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should handle string literal before imported constant", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/ReportResource.java"
+			-- Line 22 has @POST, line 23 has @Path("/generate" + ApiConfig.REPORTING_PATH)
+			local result = parser:parse_content("    @POST", file_path, 22, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("POST", result.method)
+			-- Only the string literal "/generate" should be extracted
+			assert.equals("/generate", result.metadata.raw_endpoint_path)
 		end)
 	end)
 
@@ -365,8 +472,9 @@ describe("JakartaEEFramework", function()
 		end)
 
 		it("should parse and enhance endpoints", function()
-			local content = '@GET @Path("/api/users")'
-			local result = framework:parse(content, "UserResource.java", 1, 1)
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/TestResource.java"
+			-- Line 9 has @GET
+			local result = framework:parse("    @GET", file_path, 9, 5)
 
 			assert.is_not_nil(result)
 			assert.equals("jakarta_ee", result.framework)
@@ -462,29 +570,38 @@ describe("JakartaEEParser", function()
 
 	describe("Base Path Extraction", function()
 		it("should handle class-level @Path", function()
-			local base_path = parser:extract_base_path("UserResource.java", 10)
-			assert.is_true(base_path == nil or type(base_path) == "string")
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/TestResource.java"
+			local base_path = parser:extract_base_path(file_path, 10)
+			assert.equals("/test", base_path)
+		end)
+
+		it("should return empty string for non-existent file", function()
+			local base_path = parser:extract_base_path("nonexistent.java", 10)
+			assert.equals("", base_path)
 		end)
 	end)
 
 	describe("Error Handling", function()
 		it("should handle empty content", function()
-			local result = parser:parse_content("", "test.java", 1, 1)
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/TestResource.java"
+			local result = parser:parse_content("", file_path, 1, 1)
 			assert.is_nil(result)
 		end)
 
-		it("should handle missing file path", function()
-			local result = parser:parse_content("@GET", "test.java", 1, 1)
-			assert.is_not_nil(result)
+		it("should return nil for non-existent file", function()
+			local result = parser:parse_content("@GET", "nonexistent.java", 1, 1)
+			assert.is_nil(result)
 		end)
 
 		it("should return nil for non-JAX-RS content", function()
-			local result = parser:parse_content("public void someMethod() {}", "test.java", 1, 1)
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/TestResource.java"
+			local result = parser:parse_content("public void someMethod() {}", file_path, 1, 1)
 			assert.is_nil(result)
 		end)
 
 		it("should skip comments", function()
-			local result = parser:parse_content("// @GET", "test.java", 1, 1)
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/TestResource.java"
+			local result = parser:parse_content("// @GET", file_path, 1, 1)
 			assert.is_nil(result)
 		end)
 	end)

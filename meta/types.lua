@@ -439,14 +439,15 @@
 ---@field _find_methods_recursive fun(self: endpoint.JakartaEEParser, node: table, ts_line: number, source: string, callback: function): table|nil Recursive method finder helper
 ---@field _get_method_annotations fun(self: endpoint.JakartaEEParser, method_node: table, source: string): table[] Get all annotations from method declaration
 ---@field _parse_annotation_node fun(self: endpoint.JakartaEEParser, node: table, source: string): table|nil Parse a single annotation node
----@field _extract_annotation_value fun(self: endpoint.JakartaEEParser, args_node: table, source: string): string|nil Extract string value from annotation arguments
+---@field _extract_annotation_value fun(self: endpoint.JakartaEEParser, args_node: table, source: string): string|nil Extract string value from annotation arguments (handles concatenation)
+---@field _extract_string_from_expression fun(self: endpoint.JakartaEEParser, expr_node: table, source: string): string|nil Extract string literals from binary expression
+---@field _collect_string_literals fun(self: endpoint.JakartaEEParser, node: table, source: string, parts: table): nil Recursively collect string literals from expression tree
 ---@field _find_containing_class fun(self: endpoint.JakartaEEParser, method_node: table): table|nil Find the containing class for a method
 ---@field _get_class_path_annotation fun(self: endpoint.JakartaEEParser, class_node: table, source: string): string|nil Get @Path value from class annotations
 ---@field _is_http_method_annotation fun(self: endpoint.JakartaEEParser, name: string): boolean Check if annotation is HTTP method (GET/POST/etc)
 ---@field _get_annotations_text fun(self: endpoint.JakartaEEParser, annotations: table[], source: string): string Build text from annotations for metadata
 ---@field _has_http_method_annotation fun(self: endpoint.JakartaEEParser, content: string): boolean Check for JAX-RS HTTP method annotation (regex)
 ---@field _parse_with_treesitter fun(self: endpoint.JakartaEEParser, tree: table, source: string, content: string, file_path: string, line_number: number, column: number): endpoint.entry|nil Parse using TreeSitter AST
----@field _parse_content_only fun(self: endpoint.JakartaEEParser, content: string, file_path: string, line_number: number, column: number): endpoint.entry|nil Fallback regex parsing
 
 -- ========================================
 -- CONCRETE FRAMEWORK IMPLEMENTATIONS
