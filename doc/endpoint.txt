@@ -311,6 +311,7 @@ The plugin automatically detects your framework based on:
   • .NET Core: `*.csproj`, `*.sln`, `global.json`, `appsettings.json`, `Program.cs`, `Startup.cs`
   • Ktor: `build.gradle`, `build.gradle.kts`, `pom.xml`
   • Java Servlet: `web.xml`, `WEB-INF/web.xml`, `src/main/webapp/WEB-INF/web.xml`, `pom.xml`, `build.gradle`
+  • Jakarta EE: build.gradle, build.gradle.kts, pom.xml
   • React Router: `package.json`, `tsconfig.json`, `src/`
 
 Supported Patterns:~
@@ -353,6 +354,9 @@ Supported Patterns:~
   Java Servlet:~
     Servlet methods: doGet, doPost, doPut, doDelete, doPatch
     WebServlet annotations: @WebServlet
+
+  Jakarta EE:~
+    Annotations: @GET, @POST, @PUT, @DELETE, @PATCH, @HEAD, @OPTIONS
 
   React Router:~
     Route components: Route with path attributes
