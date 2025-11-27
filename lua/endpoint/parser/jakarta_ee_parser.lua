@@ -243,7 +243,7 @@ function JakartaEEParser:_extract_path_value(annotation_line)
 	return nil
 end
 
----Finds @Path annotation near the given line
+---Finds @Path annotation near the given line (method-level, not class-level)
 function JakartaEEParser:_find_path_annotation(file_path, line_number)
 	if not file_path then
 		return nil, nil
@@ -260,22 +260,71 @@ function JakartaEEParser:_find_path_annotation(file_path, line_number)
 	end
 	file:close()
 
-	-- Look a few lines before for @Path annotation
-	for i = line_number, math.max(1, line_number - 3), -1 do
-		if i <= #lines then
-			local line = lines[i]
-			if line:match("@Path") and not line:match("class%s+%w+") then
-				-- Make sure this isn't a class-level @Path (should be near a class declaration)
-				local is_class_level = false
-				for j = i, math.min(i + 3, #lines) do
-					if lines[j]:match("class%s+%w+") then
-						is_class_level = true
-						break
-					end
+	-- In JAX-RS, @Path can appear:
+	--
+	-- Before the REST method (@GET, @POST, etc) annotation
+	-- After the REST method annotation
+	-- On the same line as the REST method annotation
+	--
+
+	-- First check the current line itself
+	if line_number <= #lines then
+		local current_line = lines[line_number]
+		if current_line:match("@Path") then
+			return current_line, line_number
+		end
+	end
+
+	-- Look a few lines AFTER for @Path annotation (JAX-RS style: @GET then @Path)
+	for i = line_number + 1, math.min(line_number + 10, #lines) do
+		local line = lines[i]
+		if line:match("@Path") then
+			-- Make sure we haven't hit a method declaration (public/private/protected)
+			-- which would mean the @Path belongs to a different method
+			local hit_method = false
+			for j = line_number + 1, i - 1 do
+				if
+					lines[j]:match("^%s*public%s+")
+					or lines[j]:match("^%s*private%s+")
+					or lines[j]:match("^%s*protected%s+")
+				then
+					hit_method = true
+					break
 				end
-				if not is_class_level then
-					return line, i
+			end
+			if not hit_method then
+				return line, i
+			end
+		end
+		-- Stop if we hit a method declaration
+		if line:match("^%s*public%s+") or line:match("^%s*private%s+") or line:match("^%s*protected%s+") then
+			break
+		end
+	end
+
+	-- Look a few lines BEFORE for @Path annotation
+	for i = line_number - 1, math.max(1, line_number - 10), -1 do
+		local line = lines[i]
+		-- Stop if we hit another HTTP method annotation (means @Path would belong to previous method)
+		-- This check MUST come before checking for @Path
+		if self:_has_http_method_annotation(line) then
+			break
+		end
+		-- Stop if we hit a method declaration (means we've gone past method annotations)
+		if line:match("^%s*public%s+") or line:match("^%s*private%s+") or line:match("^%s*protected%s+") then
+			break
+		end
+		if line:match("@Path") then
+			-- Make sure this isn't a class-level @Path (check if class declaration is nearby)
+			local is_class_level = false
+			for j = i, math.min(i + 10, #lines) do
+				if lines[j]:match("class%s+%w+") then
+					is_class_level = true
+					break
 				end
+			end
+			if not is_class_level then
+				return line, i
 			end
 		end
 	end

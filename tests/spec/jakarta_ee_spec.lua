@@ -223,6 +223,39 @@ describe("JakartaEEFramework", function()
 			assert.is_true(found_post_create, "Should find POST /users endpoint")
 		end)
 
+		it("should combine class-level and method-level @Path annotations", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/UserResource.java"
+			-- Line 17 has @GET, line 18 has @Path("/{id}")
+			local result = parser:parse_content("    @GET", file_path, 17, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			assert.equals("/users/{id}", result.endpoint_path)
+			assert.equals("/users", result.metadata.base_path)
+			assert.equals("/{id}", result.metadata.raw_endpoint_path)
+		end)
+
+		it("should find @Path on line after HTTP method annotation", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/UserResource.java"
+			-- Line 23 has @GET, line 24 has @Path("/{id}/profile")
+			local result = parser:parse_content("    @GET", file_path, 23, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			assert.equals("/users/{id}/profile", result.endpoint_path)
+		end)
+
+		it("should use only base path when no method-level @Path exists", function()
+			local file_path = "tests/fixtures/jakarta_ee/src/main/java/com/example/UserResource.java"
+			-- Line 12 has @GET with no method-level @Path
+			local result = parser:parse_content("    @GET", file_path, 12, 5)
+
+			assert.is_not_nil(result)
+			assert.equals("GET", result.method)
+			assert.equals("/users", result.endpoint_path)
+			assert.equals("/", result.metadata.raw_endpoint_path)
+		end)
+
 		it("should parse @POST annotations", function()
 			local content = "@POST"
 			local result = parser:parse_content(content, "UserResource.java", 1, 1)
