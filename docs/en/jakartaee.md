@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Jakarta EE Implementation is used widely among many Java Frameworks.  These include but are not limited to Quarkus and Helidon.  This support attempts to detect projects based on the appearance of jakarta.ws.rs imports and popular dependencies.
+The Jakarta EE Implementation is used widely among many Java Frameworks.  These include but are not limited to Quarkus, Micronaut, and Helidon.  This implementation attempts to detect the use of JAX-RS not only by the direct presence of jakarta.ws.rs dependencies but also by popular implementations of the specification.
 
 ## Framework Details
 
@@ -15,7 +15,9 @@ The Jakarta EE Implementation is used widely among many Java Frameworks.  These 
 
 The framework detect Jakarta EE projects by looking for specific dependencies in build files:
 
-**Required Dependencies (one of the following):**
+**Required Dependencies:**
+
+One of the following dependencies must be present in order to activate support:
 
 - jakarta.ws.rs
 - javax.ws.rs
@@ -35,9 +37,7 @@ The framework detect Jakarta EE projects by looking for specific dependencies in
 
 ### Annotation-Based Parsing
 
-The framework uses annotation-based parsing to extract endpoint information for Jakarta EE annotations.
-
-### Supported Annotations
+This framework searches for endpoints by searching for the REST endpoint annotations supported by JAX-RS, including:
 
 | Annotation | HTTP Method | Example |
 | @GET | GET | @GET("/users") |
@@ -47,12 +47,16 @@ The framework uses annotation-based parsing to extract endpoint information for 
 | @PATCH | PATCH | @PATCH("/users/{id}") |
 | @OPTIONS | OPTIONS | @OPTIONS |
 
-### Path Extraction Patterns
+### Identifying paths
 
-The parser extracts the path from the @Path annotation.  Path annotations are supported in both of the following formats:
+Once a REST annotation has been identified, this framework uses the tree-sitter parser to parse the Java class.  Any of the following styles of Path annotations can be recognized: 
 
 - @Path("/users")
 - @Path(value = "/users")
+- @Path(SOME_CONSTANT + "/users")
+- @Path(value = SOME_CONSTANT + "/users")
+
+Constants may be in the same class, same package, or entirely different packages.  This is one of the main reasons why tree-sitter is required.
 
 ### Controller Base Path Support
 
@@ -126,7 +130,7 @@ Base confidence: 0.8
 @Path("/users")
 public class UserResource {
   @GET
-@Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public List<User> getAllUsers() { }
   // Detected: GET /users
 
@@ -155,6 +159,20 @@ public class UserResource {
 
   @OPTIONS
   public Response getOptions() { }
+}
+```
+
+### Rest Controller using Constants in the Path names
+
+```java
+import static com.somecompany.Constants.API_BASE;
+
+@Path(API_BASE + "/users")
+public class UserResource {
+  @GET
+  @Path("/{id}/profile")
+  @Produces(MediaType.APPLICATION_JSON)
+  public UserProfile getUserProfile(@PathParam("id") Long id) { }
 }
 ```
 
@@ -187,3 +205,4 @@ vim.g.endpoint_debug = true
 > - Supports Java and Kotlin files
 > - Handles nested path structures
 > - Automatically excludes build directories from search
+> - Requires the java tree-sitter plugin for parsing (:TSInstall java)

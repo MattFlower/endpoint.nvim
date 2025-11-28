@@ -114,7 +114,6 @@ require("endpoint").setup({
 ```
 
 **Legacy Configuration (still supported with deprecation warnings):**
-
 ```lua
 require("endpoint").setup({
   picker = "telescope",       -- @deprecated: use picker.type

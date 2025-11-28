@@ -197,7 +197,7 @@ function JakartaEEParser:_parse_with_treesitter(tree, source, file_path, line_nu
   local method_path = "/"
   for _, ann in ipairs(annotations) do
     if ann.name == "Path" and ann.value then
-      method_path = self:_normalize_path(ann.value)
+      method_path = self:_normalize_path(ann.value) or "/"
       break
     end
   end
@@ -208,7 +208,7 @@ function JakartaEEParser:_parse_with_treesitter(tree, source, file_path, line_nu
   if class_node then
     local class_path = self:_get_class_path_annotation(class_node, source)
     if class_path then
-      base_path = self:_normalize_path(class_path)
+      base_path = self:_normalize_path(class_path) or ""
     end
   end
 
